@@ -158,7 +158,8 @@ export class OrbitalEngine {
     const handlePointerDown = (pos: Vector2D) => {
       if (this.probe.state !== "docked") return;
       const dist = Math.hypot(pos.x - this.probe.x, pos.y - this.probe.y);
-      if (dist < 80) {
+      // Forgiving grab radius for touch screens & high-DPI displays
+      if (dist < 120) {
         this.isAiming = true;
         this.aimCurrentPos = pos;
         this.updateAimPreview();
@@ -191,13 +192,37 @@ export class OrbitalEngine {
     window.addEventListener("mousemove", (e) => handlePointerMove(getPos(e)));
     window.addEventListener("mouseup", () => handlePointerUp());
 
+    // Robust touch slingshot aiming with native gesture prevention
     this.canvas.addEventListener("touchstart", (e) => {
-      if (e.touches.length > 0) handlePointerDown(getPos(e.touches[0]));
-    });
+      if (e.touches.length > 0) {
+        const pos = getPos(e.touches[0]);
+        const dist = Math.hypot(pos.x - this.probe.x, pos.y - this.probe.y);
+        if (dist < 120 && this.probe.state === "docked") {
+          e.preventDefault();
+          handlePointerDown(pos);
+        }
+      }
+    }, { passive: false });
+
     window.addEventListener("touchmove", (e) => {
-      if (e.touches.length > 0) handlePointerMove(getPos(e.touches[0]));
+      if (this.isAiming && e.touches.length > 0) {
+        e.preventDefault();
+        handlePointerMove(getPos(e.touches[0]));
+      }
+    }, { passive: false });
+
+    window.addEventListener("touchend", (e) => {
+      if (this.isAiming) {
+        e.preventDefault();
+        handlePointerUp();
+      }
+    }, { passive: false });
+
+    window.addEventListener("touchcancel", () => {
+      if (this.isAiming) {
+        handlePointerUp();
+      }
     });
-    window.addEventListener("touchend", () => handlePointerUp());
 
     // Keyboard RCS controls
     window.addEventListener("keydown", (e) => {

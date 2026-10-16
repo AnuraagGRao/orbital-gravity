@@ -141,13 +141,15 @@ export default function App() {
   const fuelPercent = Math.round((fuel / maxFuel) * 100);
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-slate-950 font-sans select-none flex flex-col items-center justify-center">
+    <div className="relative w-screen h-screen overflow-hidden bg-slate-950 font-sans select-none flex flex-col items-center justify-center touch-none">
       {/* ── Top Navigation & Mission Header ──────────────────────────────────── */}
-      <header className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-6 py-4 bg-slate-950/80 backdrop-blur-md border-b border-white/10">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-indigo-400">
-            <Compass className="w-5 h-5 animate-spin [animation-duration:12s]" />
-            <span className="font-mono text-xs font-bold tracking-widest uppercase">ORBIT DRIFT // RELATIVISTIC ENGINE</span>
+      <header className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-3 py-2 sm:px-6 sm:py-4 bg-slate-950/80 backdrop-blur-md border-b border-white/10">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-indigo-400">
+            <Compass className="w-4 h-4 sm:w-5 sm:h-5 animate-spin [animation-duration:12s]" />
+            <span className="font-mono text-[10px] sm:text-xs font-bold tracking-widest uppercase">
+              ORBIT DRIFT <span className="hidden sm:inline">// RELATIVISTIC ENGINE</span>
+            </span>
           </div>
 
           <div className="hidden md:flex items-center gap-2">
@@ -157,17 +159,17 @@ export default function App() {
         </div>
 
         {/* Level & Mode Selectors */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={handleProceduralToggle}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono flex items-center gap-1.5 transition-all ${
+            className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-mono flex items-center gap-1 sm:gap-1.5 transition-all ${
               isProcedural 
                 ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 font-bold" 
                 : "glass-btn text-slate-300 hover:text-white"
             }`}
           >
-            <Shuffle className="w-3.5 h-3.5" />
-            <span>{isProcedural ? `Seed #${procSeed}` : "Procedural Mode"}</span>
+            <Shuffle className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            <span>{isProcedural ? `#${procSeed}` : "Procedural"}</span>
           </button>
 
           {!isProcedural && (
@@ -178,11 +180,11 @@ export default function App() {
                 setLevelIndex(idx);
                 loadLevel(CAMPAIGN_LEVELS[idx]);
               }}
-              className="glass-panel px-3 py-1.5 text-xs font-mono text-white bg-slate-900 border border-white/15 rounded-xl outline-none cursor-pointer"
+              className="glass-panel px-2 py-1 sm:px-3 sm:py-1.5 text-[11px] sm:text-xs font-mono text-white bg-slate-900 border border-white/15 rounded-xl outline-none cursor-pointer max-w-[120px] sm:max-w-none truncate"
             >
               {CAMPAIGN_LEVELS.map((lvl, idx) => (
                 <option key={lvl.id} value={idx}>
-                  Sector {lvl.sector}: {lvl.title}
+                  S{lvl.sector}: {lvl.title}
                 </option>
               ))}
             </select>
@@ -202,13 +204,13 @@ export default function App() {
           )}
 
           {/* Volume Slider & Mute Control */}
-          <div className="glass-panel px-3 py-1.5 flex items-center gap-2 rounded-xl">
+          <div className="glass-panel px-2 py-1 sm:px-3 sm:py-1.5 flex items-center gap-1.5 sm:gap-2 rounded-xl">
             <button
               onClick={toggleSound}
               className="text-slate-300 hover:text-white transition-all cursor-pointer flex items-center justify-center"
               title={isMuted ? "Unmute Audio" : "Mute Audio"}
             >
-              {isMuted || volume === 0 ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-indigo-400" />}
+              {isMuted || volume === 0 ? <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-400" /> : <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400" />}
             </button>
             <input
               type="range"
@@ -217,10 +219,10 @@ export default function App() {
               step="0.05"
               value={isMuted ? 0 : volume}
               onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-              className="volume-slider w-16 sm:w-20"
+              className="volume-slider w-12 sm:w-20"
               title={`Master Volume: ${Math.round((isMuted ? 0 : volume) * 100)}%`}
             />
-            <span className="text-[10px] font-mono text-indigo-300 w-7 text-right">
+            <span className="text-[10px] font-mono text-indigo-300 w-6 sm:w-7 text-right hidden xs:inline">
               {isMuted ? "0%" : `${Math.round(volume * 100)}%`}
             </span>
           </div>
@@ -228,26 +230,26 @@ export default function App() {
       </header>
 
       {/* ── Main Canvas Stage ─────────────────────────────────────────────────── */}
-      <div className="relative w-full max-w-[1024px] aspect-[1024/680] flex items-center justify-center p-2">
+      <div className="relative w-full max-w-[1024px] aspect-[1024/680] flex items-center justify-center p-1 sm:p-2 touch-none">
         <canvas
           ref={canvasRef}
-          className="w-full h-full rounded-2xl border border-white/10 shadow-[0_0_60px_rgba(15,23,42,0.8)] cursor-crosshair"
+          className="w-full h-full rounded-2xl border border-white/10 shadow-[0_0_60px_rgba(15,23,42,0.8)] cursor-crosshair touch-none"
         />
 
         {/* ── Real-Time HUD Overlay ───────────────────────────────────────────── */}
-        <div className="absolute top-6 left-6 pointer-events-none flex flex-col gap-2.5">
+        <div className="absolute top-3 left-3 sm:top-6 sm:left-6 pointer-events-none flex flex-col gap-1.5 sm:gap-2.5 scale-90 sm:scale-100 origin-top-left">
           {/* Velocity & Status */}
-          <div className="glass-panel px-4 py-2 flex items-center gap-3 text-xs font-mono text-white backdrop-blur-md">
-            <Rocket className="w-4 h-4 text-sky-400" />
+          <div className="glass-panel px-3 py-1.5 sm:px-4 sm:py-2 flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs font-mono text-white backdrop-blur-md">
+            <Rocket className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-400" />
             <div>
-              <span className="text-slate-400">VELOCITY: </span>
+              <span className="text-slate-400">VEL: </span>
               <span className="font-extrabold text-sky-300">{speedKmh.toLocaleString()} km/s</span>
             </div>
           </div>
 
           {/* RCS Fuel Gauge */}
-          <div className="glass-panel px-4 py-2 flex flex-col gap-1.5 text-xs font-mono text-white backdrop-blur-md w-44">
-            <div className="flex justify-between items-center text-[11px]">
+          <div className="glass-panel px-3 py-1.5 sm:px-4 sm:py-2 flex flex-col gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-mono text-white backdrop-blur-md w-36 sm:w-44">
+            <div className="flex justify-between items-center text-[10px] sm:text-[11px]">
               <span className="text-slate-400">RCS FUEL:</span>
               <span className={`font-bold ${fuelPercent > 30 ? "text-emerald-400" : "text-amber-400"}`}>
                 {fuelPercent}%
@@ -264,8 +266,8 @@ export default function App() {
           </div>
 
           {/* Relics Recovered */}
-          <div className="glass-panel px-4 py-2 flex items-center gap-2 text-xs font-mono text-white backdrop-blur-md">
-            <Sparkles className="w-4 h-4 text-amber-400" />
+          <div className="glass-panel px-3 py-1.5 sm:px-4 sm:py-2 flex items-center gap-2 text-[11px] sm:text-xs font-mono text-white backdrop-blur-md">
+            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
             <span className="text-slate-400">RELICS: </span>
             <span className="font-bold text-amber-300">
               {relicsCount} / {totalRelics}
@@ -274,13 +276,13 @@ export default function App() {
         </div>
 
         {/* Time Warp Selector (Top-Right of Canvas) */}
-        <div className="absolute top-6 right-6 flex items-center gap-1.5 glass-panel p-1.5 text-xs font-mono">
-          <FastForward className="w-3.5 h-3.5 text-slate-400 ml-1.5" />
+        <div className="absolute top-3 right-3 sm:top-6 sm:right-6 flex items-center gap-1 sm:gap-1.5 glass-panel p-1 sm:p-1.5 text-[11px] sm:text-xs font-mono scale-90 sm:scale-100 origin-top-right">
+          <FastForward className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400 ml-1 sm:ml-1.5" />
           {[1, 2, 4].map((warp) => (
             <button
               key={warp}
               onClick={() => handleTimeWarp(warp)}
-              className={`px-2.5 py-1 rounded-lg transition-all ${
+              className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg transition-all ${
                 timeWarp === warp
                   ? "bg-indigo-600 text-white font-bold"
                   : "text-slate-400 hover:text-white"
@@ -293,38 +295,38 @@ export default function App() {
 
         {/* Slingshot Guidance Prompt */}
         {probeState === "docked" && (
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 glass-pill px-5 py-2 text-xs font-mono text-indigo-300 border border-indigo-500/30 flex items-center gap-2 shadow-lg animate-pulse">
-            <Radio className="w-4 h-4 text-indigo-400 animate-spin" />
-            <span>DRAG BACKWARD TO AIM • PULL TO RIM FOR FULL FORCE</span>
+          <div className="absolute bottom-16 sm:bottom-6 left-1/2 -translate-x-1/2 glass-pill px-3 py-1.5 sm:px-5 sm:py-2 text-[10px] sm:text-xs font-mono text-indigo-300 border border-indigo-500/30 flex items-center gap-2 shadow-lg animate-pulse whitespace-nowrap">
+            <Radio className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400 animate-spin" />
+            <span>DRAG BACKWARD TO AIM • PULL RIM FOR FULL FORCE</span>
           </div>
         )}
 
         {/* In-Flight RCS Touch Thrusters (Mobile / Mouse Friendly) */}
         {probeState === "flying" && (
-          <div className="absolute bottom-6 right-6 flex flex-col items-center gap-1 glass-panel p-2">
-            <div className="text-[10px] font-mono text-slate-400 mb-1">RCS THRUSTERS (WASD)</div>
+          <div className="absolute bottom-3 right-3 sm:bottom-6 sm:right-6 flex flex-col items-center gap-1 glass-panel p-1.5 sm:p-2 scale-90 sm:scale-100 origin-bottom-right">
+            <div className="text-[9px] sm:text-[10px] font-mono text-slate-400 mb-0.5">RCS (WASD)</div>
             <button
               onClick={() => engineRef.current?.applyRcsImpulse("up")}
-              className="glass-btn px-3 py-1 rounded text-xs font-mono text-white"
+              className="glass-btn px-3 py-1.5 rounded text-xs font-mono text-white active:bg-indigo-600"
             >
               ▲
             </button>
             <div className="flex gap-1">
               <button
                 onClick={() => engineRef.current?.applyRcsImpulse("left")}
-                className="glass-btn px-3 py-1 rounded text-xs font-mono text-white"
+                className="glass-btn px-3 py-1.5 rounded text-xs font-mono text-white active:bg-indigo-600"
               >
                 ◀
               </button>
               <button
                 onClick={() => engineRef.current?.applyRcsImpulse("down")}
-                className="glass-btn px-3 py-1 rounded text-xs font-mono text-white"
+                className="glass-btn px-3 py-1.5 rounded text-xs font-mono text-white active:bg-indigo-600"
               >
                 ▼
               </button>
               <button
                 onClick={() => engineRef.current?.applyRcsImpulse("right")}
-                className="glass-btn px-3 py-1 rounded text-xs font-mono text-white"
+                className="glass-btn px-3 py-1.5 rounded text-xs font-mono text-white active:bg-indigo-600"
               >
                 ▶
               </button>
@@ -333,13 +335,13 @@ export default function App() {
         )}
 
         {/* Reset Flight Button */}
-        <div className="absolute bottom-6 left-6">
+        <div className="absolute bottom-3 left-3 sm:bottom-6 sm:left-6 scale-90 sm:scale-100 origin-bottom-left">
           <button
             onClick={handleResetFlight}
-            className="glass-btn px-4 py-2.5 rounded-xl text-xs font-mono text-slate-300 hover:text-white flex items-center gap-2"
+            className="glass-btn px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-mono text-slate-300 hover:text-white flex items-center gap-1.5 sm:gap-2 cursor-pointer active:scale-95"
           >
-            <RotateCcw className="w-4 h-4 text-slate-400" />
-            <span>RESET TRAJECTORY</span>
+            <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" />
+            <span>RESET FLIGHT</span>
           </button>
         </div>
 
