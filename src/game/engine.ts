@@ -16,6 +16,12 @@ export class OrbitalEngine {
   public probe: Probe;
   public trajectoryPreview: TrajectoryResult | null = null;
 
+  // Slingshot Pull & Calibration Constants
+  public static readonly MAX_PULL_RADIUS = 150;
+  public static readonly MIN_PULL_THRESHOLD = 14;
+  public static readonly MIN_LAUNCH_SPEED = 140;
+  public static readonly MAX_LAUNCH_SPEED = 340;
+
   // Interaction & Aiming
   private isAiming: boolean = false;
   private aimCurrentPos: Vector2D = { x: 0, y: 0 };
@@ -169,18 +175,15 @@ export class OrbitalEngine {
       if (!this.isAiming) return;
       this.isAiming = false;
 
-      // Calculate launch velocity vector (opposite of drag)
-      const dx = this.probe.x - this.aimCurrentPos.x;
-      const dy = this.probe.y - this.aimCurrentPos.y;
-      const pullDist = Math.hypot(dx, dy);
-
-      if (pullDist > 15) {
-        const powerScale = 2.4;
-        this.probe.vx = dx * powerScale;
-        this.probe.vy = dy * powerScale;
+      const aim = this.getAimData();
+      if (aim.isBeyondThreshold) {
+        this.probe.vx = aim.launchVel.x;
+        this.probe.vy = aim.launchVel.y;
         this.probe.state = "flying";
         this.trajectoryPreview = null;
         celestialSound.playLaunch();
+      } else {
+        this.trajectoryPreview = null;
       }
     };
 
@@ -205,27 +208,75 @@ export class OrbitalEngine {
     });
   }
 
-  private updateAimPreview() {
-    const dx = this.probe.x - this.aimCurrentPos.x;
-    const dy = this.probe.y - this.aimCurrentPos.y;
-    const pullDist = Math.hypot(dx, dy);
-    const powerScale = 2.4;
+  /**
+   * Evaluates slingshot aiming geometry, radial boundary clamping, power scaling, and launch vector.
+   */
+  public getAimData() {
+    const rawDx = this.probe.x - this.aimCurrentPos.x;
+    const rawDy = this.probe.y - this.aimCurrentPos.y;
+    const rawDist = Math.hypot(rawDx, rawDy);
+    const launchAngle = Math.atan2(rawDy, rawDx); // forward launch direction
 
-    const initialVel: Vector2D = {
-      x: dx * powerScale,
-      y: dy * powerScale,
+    const isBeyondThreshold = rawDist >= OrbitalEngine.MIN_PULL_THRESHOLD;
+    const pullRatio = isBeyondThreshold
+      ? Math.min(
+          1,
+          (rawDist - OrbitalEngine.MIN_PULL_THRESHOLD) /
+            (OrbitalEngine.MAX_PULL_RADIUS - OrbitalEngine.MIN_PULL_THRESHOLD)
+        )
+      : 0;
+
+    const launchSpeed =
+      OrbitalEngine.MIN_LAUNCH_SPEED +
+      (OrbitalEngine.MAX_LAUNCH_SPEED - OrbitalEngine.MIN_LAUNCH_SPEED) * pullRatio;
+    const isFullForce = pullRatio >= 0.98;
+
+    // Handle clamped to MAX_PULL_RADIUS along the pull angle
+    const pullAngle = Math.atan2(
+      this.aimCurrentPos.y - this.probe.y,
+      this.aimCurrentPos.x - this.probe.x
+    );
+    const clampedDist = Math.min(rawDist, OrbitalEngine.MAX_PULL_RADIUS);
+    const handlePos: Vector2D = {
+      x: this.probe.x + Math.cos(pullAngle) * clampedDist,
+      y: this.probe.y + Math.sin(pullAngle) * clampedDist,
     };
+
+    const launchVel: Vector2D = {
+      x: Math.cos(launchAngle) * launchSpeed,
+      y: Math.sin(launchAngle) * launchSpeed,
+    };
+
+    return {
+      handlePos,
+      pullRatio,
+      launchSpeed,
+      launchVel,
+      launchAngle,
+      rawDist,
+      isBeyondThreshold,
+      isFullForce,
+    };
+  }
+
+  private updateAimPreview() {
+    const aim = this.getAimData();
+
+    if (!aim.isBeyondThreshold) {
+      this.trajectoryPreview = null;
+      return;
+    }
 
     this.trajectoryPreview = simulateTrajectory(
       { x: this.probe.x, y: this.probe.y },
-      initialVel,
+      aim.launchVel,
       this.currentLevel.bodies,
       this.currentLevel.target,
       this.currentLevel.relics
     );
 
-    // Audio tension feedback
-    celestialSound.playTension(Math.min(1, pullDist / 180));
+    // Audio tension feedback (smoothly mapped 0..1)
+    celestialSound.playTension(aim.pullRatio);
   }
 
   // ── Main Engine Loop ──────────────────────────────────────────────────────
@@ -649,18 +700,131 @@ export class OrbitalEngine {
 
   private renderAimSlingshot() {
     const { ctx } = this;
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
-    ctx.lineWidth = 2;
+    const aim = this.getAimData();
+    const maxR = OrbitalEngine.MAX_PULL_RADIUS;
+
+    ctx.save();
+
+    // 1. Concentric calibration guide rings (33%, 66%)
+    const ringSteps = [0.33, 0.66];
+    ctx.setLineDash([2, 6]);
+    ctx.lineWidth = 1;
+    for (const step of ringSteps) {
+      ctx.strokeStyle = "rgba(99, 102, 241, 0.12)";
+      ctx.beginPath();
+      ctx.arc(this.probe.x, this.probe.y, maxR * step, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // 2. Maximum Pull Boundary Ring (100% Full Force perimeter)
+    ctx.setLineDash([4, 6]);
+    ctx.lineWidth = aim.isFullForce ? 2.5 : 1.5;
+    ctx.strokeStyle = aim.isFullForce
+      ? "rgba(34, 197, 94, 0.75)"
+      : "rgba(99, 102, 241, 0.35)";
     ctx.beginPath();
-    ctx.moveTo(this.probe.x, this.probe.y);
-    ctx.lineTo(this.aimCurrentPos.x, this.aimCurrentPos.y);
+    ctx.arc(this.probe.x, this.probe.y, maxR, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Full force boundary pulse glow when maxed
+    if (aim.isFullForce) {
+      ctx.strokeStyle = "rgba(74, 222, 128, 0.25)";
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.arc(this.probe.x, this.probe.y, maxR, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // 3. Elastic Slingshot Tether Bands (from probe left/right panels to handle)
+    const bandColor = aim.isFullForce
+      ? "rgba(74, 222, 128, 0.9)"
+      : `rgba(56, 189, 248, ${0.45 + aim.pullRatio * 0.45})`;
+
+    ctx.strokeStyle = bandColor;
+    ctx.lineWidth = 2 + aim.pullRatio * 1.5;
+    ctx.beginPath();
+    ctx.moveTo(this.probe.x - 10, this.probe.y);
+    ctx.lineTo(aim.handlePos.x, aim.handlePos.y);
+    ctx.lineTo(this.probe.x + 10, this.probe.y);
     ctx.stroke();
 
-    // Pull Handle
-    ctx.fillStyle = "#6366f1";
+    // 4. Forward Launch Vector Arrow (pointing opposite of drag)
+    if (aim.isBeyondThreshold) {
+      const arrowLen = 30 + aim.pullRatio * 40;
+      const fwdX = this.probe.x + Math.cos(aim.launchAngle) * arrowLen;
+      const fwdY = this.probe.y + Math.sin(aim.launchAngle) * arrowLen;
+
+      // Glow line
+      ctx.strokeStyle = aim.isFullForce ? "#4ade80" : "#38bdf8";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(this.probe.x, this.probe.y);
+      ctx.lineTo(fwdX, fwdY);
+      ctx.stroke();
+
+      // Arrow head
+      const headLen = 8;
+      const headAngle = Math.PI / 6;
+      ctx.fillStyle = aim.isFullForce ? "#4ade80" : "#38bdf8";
+      ctx.beginPath();
+      ctx.moveTo(fwdX, fwdY);
+      ctx.lineTo(
+        fwdX - headLen * Math.cos(aim.launchAngle - headAngle),
+        fwdY - headLen * Math.sin(aim.launchAngle - headAngle)
+      );
+      ctx.lineTo(
+        fwdX - headLen * Math.cos(aim.launchAngle + headAngle),
+        fwdY - headLen * Math.sin(aim.launchAngle + headAngle)
+      );
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // 5. Pull Handle
+    ctx.shadowColor = aim.isFullForce ? "#22c55e" : "#6366f1";
+    ctx.shadowBlur = aim.isFullForce ? 14 : 8;
+    ctx.fillStyle = aim.isFullForce ? "#22c55e" : "#6366f1";
     ctx.beginPath();
-    ctx.arc(this.aimCurrentPos.x, this.aimCurrentPos.y, 8, 0, Math.PI * 2);
+    ctx.arc(aim.handlePos.x, aim.handlePos.y, aim.isFullForce ? 9 : 7, 0, Math.PI * 2);
     ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Handle white core
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(aim.handlePos.x, aim.handlePos.y, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 6. Floating Precision HUD Badge
+    const badgeText = !aim.isBeyondThreshold
+      ? "RELEASE TO CANCEL"
+      : aim.isFullForce
+      ? "MAX THRUST (100%)"
+      : `THRUST ${Math.round(aim.pullRatio * 100)}% • ${Math.round(aim.launchSpeed * 25)} km/s`;
+
+    ctx.font = "bold 10px 'JetBrains Mono', monospace";
+    const textWidth = ctx.measureText(badgeText).width;
+    const badgeX = aim.handlePos.x - textWidth / 2 - 8;
+    const badgeY = aim.handlePos.y + 18;
+
+    ctx.fillStyle = "rgba(10, 15, 30, 0.88)";
+    ctx.strokeStyle = aim.isFullForce ? "rgba(34, 197, 94, 0.8)" : "rgba(99, 102, 241, 0.45)";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    if (typeof (ctx as any).roundRect === "function") {
+      (ctx as any).roundRect(badgeX, badgeY, textWidth + 16, 20, 6);
+    } else {
+      ctx.rect(badgeX, badgeY, textWidth + 16, 20);
+    }
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = aim.isFullForce ? "#4ade80" : !aim.isBeyondThreshold ? "#94a3b8" : "#e0e7ff";
+    ctx.textAlign = "left";
+    ctx.fillText(badgeText, badgeX + 8, badgeY + 14);
+
+    ctx.restore();
   }
 
   private renderProbe() {

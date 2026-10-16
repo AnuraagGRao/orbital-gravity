@@ -295,7 +295,7 @@ export default function App() {
         {probeState === "docked" && (
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 glass-pill px-5 py-2 text-xs font-mono text-indigo-300 border border-indigo-500/30 flex items-center gap-2 shadow-lg animate-pulse">
             <Radio className="w-4 h-4 text-indigo-400 animate-spin" />
-            <span>DRAG PROBE BACKWARD TO AIM & RELEASE SLINGSHOT</span>
+            <span>DRAG BACKWARD TO AIM • PULL TO RIM FOR FULL FORCE</span>
           </div>
         )}
 

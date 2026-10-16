@@ -1,7 +1,7 @@
 import type { Vector2D, CelestialBody, TargetBeacon, Relic } from "./types";
 
 export const GRAVITY_CONSTANT = 1800;
-export const MAX_CAPTURE_SPEED = 140; // Max speed allowed to dock into target beacon without slingshotting through
+export const MAX_CAPTURE_SPEED = 280; // Max speed allowed to dock into target beacon without slingshotting through
 
 export interface TrajectoryPoint {
   x: number;
