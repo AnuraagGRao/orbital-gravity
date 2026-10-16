@@ -19,8 +19,8 @@ export class OrbitalEngine {
   // Slingshot Pull & Calibration Constants
   public static readonly MAX_PULL_RADIUS = 150;
   public static readonly MIN_PULL_THRESHOLD = 14;
-  public static readonly MIN_LAUNCH_SPEED = 140;
-  public static readonly MAX_LAUNCH_SPEED = 340;
+  public static readonly MIN_LAUNCH_SPEED = 40;
+  public static readonly MAX_LAUNCH_SPEED = 320;
 
   // Interaction & Aiming
   private isAiming: boolean = false;
