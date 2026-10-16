@@ -24,6 +24,7 @@ export default function App() {
   const [probeState, setProbeState] = useState<Probe["state"]>("docked");
   const [timeWarp, setTimeWarpState] = useState(1);
   const [isMuted, setIsMuted] = useState(celestialSound.isMuted);
+  const [volume, setVolumeState] = useState(celestialSound.volume);
 
   // Modals & Dialogue
   const [victoryModal, setVictoryModal] = useState<MissionResult | null>(null);
@@ -128,6 +129,15 @@ export default function App() {
     setIsMuted(muted);
   };
 
+  const handleVolumeChange = (newVol: number) => {
+    setVolumeState(newVol);
+    celestialSound.setVolume(newVol);
+    if (isMuted && newVol > 0) {
+      celestialSound.toggleMute();
+      setIsMuted(false);
+    }
+  };
+
   const fuelPercent = Math.round((fuel / maxFuel) * 100);
 
   return (
@@ -179,7 +189,7 @@ export default function App() {
           )}
 
           {/* Audio Indicator */}
-          {!isMuted && (
+          {!isMuted && volume > 0 && (
             <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-slate-900/80 border border-indigo-500/30 rounded-full text-xs font-mono text-indigo-300">
               <div className="flex items-end gap-0.5 h-3">
                 <span className="w-0.5 bg-indigo-400 rounded-full animate-pulse h-full" />
@@ -191,13 +201,29 @@ export default function App() {
             </div>
           )}
 
-          <button
-            onClick={toggleSound}
-            className="glass-btn p-2 text-slate-300 hover:text-white rounded-xl"
-            title={isMuted ? "Unmute" : "Mute"}
-          >
-            {isMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-indigo-400" />}
-          </button>
+          {/* Volume Slider & Mute Control */}
+          <div className="glass-panel px-3 py-1.5 flex items-center gap-2 rounded-xl">
+            <button
+              onClick={toggleSound}
+              className="text-slate-300 hover:text-white transition-all cursor-pointer flex items-center justify-center"
+              title={isMuted ? "Unmute Audio" : "Mute Audio"}
+            >
+              {isMuted || volume === 0 ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-indigo-400" />}
+            </button>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={isMuted ? 0 : volume}
+              onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+              className="volume-slider w-16 sm:w-20"
+              title={`Master Volume: ${Math.round((isMuted ? 0 : volume) * 100)}%`}
+            />
+            <span className="text-[10px] font-mono text-indigo-300 w-7 text-right">
+              {isMuted ? "0%" : `${Math.round(volume * 100)}%`}
+            </span>
+          </div>
         </div>
       </header>
 

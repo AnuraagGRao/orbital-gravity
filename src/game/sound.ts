@@ -5,9 +5,17 @@ export class CelestialAudio {
   private ctx: AudioContext | null = null;
   private bgmAudio: HTMLAudioElement | null = null;
   public isMuted: boolean = false;
+  public volume: number = 0.7; // 0.0 to 1.0
 
   constructor() {
     this.isMuted = localStorage.getItem("og_muted") === "true";
+    const savedVol = localStorage.getItem("og_volume");
+    if (savedVol !== null) {
+      const parsed = parseFloat(savedVol);
+      if (!isNaN(parsed)) {
+        this.volume = Math.max(0, Math.min(1, parsed));
+      }
+    }
   }
 
   private initCtx() {
@@ -20,12 +28,23 @@ export class CelestialAudio {
     }
   }
 
+  public setVolume(val: number) {
+    this.volume = Math.max(0, Math.min(1, val));
+    localStorage.setItem("og_volume", this.volume.toString());
+
+    if (this.bgmAudio && !this.isMuted) {
+      this.bgmAudio.volume = 0.45 * this.volume;
+    }
+  }
+
   startBgm() {
-    if (this.isMuted) return;
+    if (this.isMuted || this.volume <= 0) return;
     if (!this.bgmAudio) {
       this.bgmAudio = new Audio("/audio/bgm.mp3");
       this.bgmAudio.loop = true;
-      this.bgmAudio.volume = 0.45;
+      this.bgmAudio.volume = 0.45 * this.volume;
+    } else {
+      this.bgmAudio.volume = 0.45 * this.volume;
     }
     this.bgmAudio.play().catch(() => {
       // Browser autoplay policy guard
@@ -34,7 +53,7 @@ export class CelestialAudio {
 
   // Slingshot Aim Tension Hum (frequency scales with pull distance)
   playTension(powerNormalized: number) {
-    if (this.isMuted) return;
+    if (this.isMuted || this.volume <= 0) return;
     this.initCtx();
     if (!this.ctx) return;
 
@@ -46,7 +65,7 @@ export class CelestialAudio {
     const freq = 120 + powerNormalized * 280; // 120Hz to 400Hz
     osc.frequency.setValueAtTime(freq, now);
 
-    gain.gain.setValueAtTime(0.04, now);
+    gain.gain.setValueAtTime(0.04 * this.volume, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
 
     osc.connect(gain);
@@ -57,7 +76,7 @@ export class CelestialAudio {
 
   // Probe Launch Swoosh
   playLaunch() {
-    if (this.isMuted) return;
+    if (this.isMuted || this.volume <= 0) return;
     this.initCtx();
     if (!this.ctx) return;
 
@@ -69,7 +88,7 @@ export class CelestialAudio {
     osc.frequency.setValueAtTime(180, now);
     osc.frequency.exponentialRampToValueAtTime(650, now + 0.25);
 
-    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.setValueAtTime(0.2 * this.volume, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
 
     osc.connect(gain);
@@ -80,7 +99,7 @@ export class CelestialAudio {
 
   // Relic Starlight Crystal Pickup Chime
   playRelic() {
-    if (this.isMuted) return;
+    if (this.isMuted || this.volume <= 0) return;
     this.initCtx();
     if (!this.ctx) return;
 
@@ -94,7 +113,7 @@ export class CelestialAudio {
       osc.type = "sine";
       osc.frequency.setValueAtTime(freq, now + idx * 0.04);
 
-      gain.gain.setValueAtTime(0.12, now + idx * 0.04);
+      gain.gain.setValueAtTime(0.12 * this.volume, now + idx * 0.04);
       gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.04 + 0.3);
 
       osc.connect(gain);
@@ -106,7 +125,7 @@ export class CelestialAudio {
 
   // RCS Thruster Burst
   playThruster() {
-    if (this.isMuted) return;
+    if (this.isMuted || this.volume <= 0) return;
     this.initCtx();
     if (!this.ctx) return;
 
@@ -118,7 +137,7 @@ export class CelestialAudio {
     osc.frequency.setValueAtTime(80, now);
     osc.frequency.linearRampToValueAtTime(45, now + 0.08);
 
-    gain.gain.setValueAtTime(0.08, now);
+    gain.gain.setValueAtTime(0.08 * this.volume, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
 
     osc.connect(gain);
@@ -129,7 +148,7 @@ export class CelestialAudio {
 
   // Wormhole Spacetime Jump
   playWormhole() {
-    if (this.isMuted) return;
+    if (this.isMuted || this.volume <= 0) return;
     this.initCtx();
     if (!this.ctx) return;
 
@@ -142,7 +161,7 @@ export class CelestialAudio {
     osc.frequency.exponentialRampToValueAtTime(1200, now + 0.2);
     osc.frequency.exponentialRampToValueAtTime(200, now + 0.4);
 
-    gain.gain.setValueAtTime(0.18, now);
+    gain.gain.setValueAtTime(0.18 * this.volume, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
 
     osc.connect(gain);
@@ -153,7 +172,7 @@ export class CelestialAudio {
 
   // Victory / Destination Capture Fanfare
   playVictory() {
-    if (this.isMuted) return;
+    if (this.isMuted || this.volume <= 0) return;
     this.initCtx();
     if (!this.ctx) return;
 
@@ -167,7 +186,7 @@ export class CelestialAudio {
       osc.type = "triangle";
       osc.frequency.setValueAtTime(freq, now + idx * 0.08);
 
-      gain.gain.setValueAtTime(0.15, now + idx * 0.08);
+      gain.gain.setValueAtTime(0.15 * this.volume, now + idx * 0.08);
       gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.5);
 
       osc.connect(gain);
@@ -179,7 +198,7 @@ export class CelestialAudio {
 
   // Impact / Crash
   playCrash() {
-    if (this.isMuted) return;
+    if (this.isMuted || this.volume <= 0) return;
     this.initCtx();
     if (!this.ctx) return;
 
@@ -191,7 +210,7 @@ export class CelestialAudio {
     osc.frequency.setValueAtTime(110, now);
     osc.frequency.exponentialRampToValueAtTime(20, now + 0.35);
 
-    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.setValueAtTime(0.25 * this.volume, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
 
     osc.connect(gain);
@@ -206,6 +225,9 @@ export class CelestialAudio {
     if (this.isMuted) {
       if (this.bgmAudio) this.bgmAudio.pause();
     } else {
+      if (this.bgmAudio) {
+        this.bgmAudio.volume = 0.45 * this.volume;
+      }
       this.startBgm();
     }
     return this.isMuted;
