@@ -155,11 +155,12 @@ export class OrbitalEngine {
       };
     };
 
-    const handlePointerDown = (pos: Vector2D) => {
+    const handlePointerDown = (pos: Vector2D, isTouch = false) => {
       if (this.probe.state !== "docked") return;
       const dist = Math.hypot(pos.x - this.probe.x, pos.y - this.probe.y);
       // Forgiving grab radius for touch screens & high-DPI displays
-      if (dist < 120) {
+      const threshold = isTouch ? 180 : 130;
+      if (dist < threshold) {
         this.isAiming = true;
         this.aimCurrentPos = pos;
         this.updateAimPreview();
@@ -188,7 +189,7 @@ export class OrbitalEngine {
       }
     };
 
-    this.canvas.addEventListener("mousedown", (e) => handlePointerDown(getPos(e)));
+    this.canvas.addEventListener("mousedown", (e) => handlePointerDown(getPos(e), false));
     window.addEventListener("mousemove", (e) => handlePointerMove(getPos(e)));
     window.addEventListener("mouseup", () => handlePointerUp());
 
@@ -197,9 +198,9 @@ export class OrbitalEngine {
       if (e.touches.length > 0) {
         const pos = getPos(e.touches[0]);
         const dist = Math.hypot(pos.x - this.probe.x, pos.y - this.probe.y);
-        if (dist < 120 && this.probe.state === "docked") {
+        if (dist < 180 && this.probe.state === "docked") {
           e.preventDefault();
-          handlePointerDown(pos);
+          handlePointerDown(pos, true);
         }
       }
     }, { passive: false });
