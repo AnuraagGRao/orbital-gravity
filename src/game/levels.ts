@@ -419,3 +419,19 @@ export function generateProceduralLevel(seedNumber: number): LevelData {
     threeStarFuel: 70,
   };
 }
+
+/**
+ * Endless Warp Odyssey Sector Generator
+ * Progressively generates deeper sectors carrying over fuel.
+ */
+export function generateOdysseySector(sectorNum: number, startFuel: number = 160): LevelData {
+  const seed = (sectorNum * 7919) % 10000;
+  const level = generateProceduralLevel(seed);
+  level.id = `odyssey_sec_${sectorNum}`;
+  level.sector = sectorNum;
+  level.title = `WARP ODYSSEY // SECTOR ${sectorNum}`;
+  level.subtitle = `Relativistic Jump ${sectorNum}`;
+  level.briefing = `Warp jump successful into uncharted sector ${sectorNum}. Maintain momentum, collect relics (+25 fuel bonus each), and enter the hyper-beacon to warp to the next galaxy.`;
+  level.initialFuel = startFuel;
+  return level;
+}

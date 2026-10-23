@@ -102,6 +102,17 @@ export function simulateTrajectory(
           vy *= 1 - drag * stepDelta;
         }
       }
+
+      // Atmospheric aerobraking drag
+      if (b.hasAtmosphere) {
+        const atmoRadius = b.atmosphereRadius || b.radius * 1.65;
+        if (d <= atmoRadius && d > b.radius) {
+          const atmoDepth = 1 - (d - b.radius) / (atmoRadius - b.radius);
+          const drag = 0.45 * atmoDepth;
+          vx *= 1 - drag * stepDelta;
+          vy *= 1 - drag * stepDelta;
+        }
+      }
     }
 
     // 2. Check Target Beacon entry

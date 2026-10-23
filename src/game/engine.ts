@@ -8,6 +8,7 @@ import {
   type TrajectoryResult 
 } from "./physics";
 import { celestialSound } from "./sound";
+import { generateOdysseySector } from "./levels";
 
 export class OrbitalEngine {
   private canvas: HTMLCanvasElement;
@@ -77,12 +78,20 @@ export class OrbitalEngine {
     }
   }
 
+  public ghostTrail: Vector2D[] = [];
+  public isOdysseyMode: boolean = false;
+  public odysseySector: number = 1;
+  public onOdysseyWarp?: (nextSector: number, fuelRemaining: number) => void;
+
   public setLevel(newLevel: LevelData) {
     this.currentLevel = JSON.parse(JSON.stringify(newLevel));
     this.resetProbe();
   }
 
   public resetProbe() {
+    if (this.probe.trail.length > 4) {
+      this.ghostTrail = this.probe.trail.map((t) => ({ x: t.x, y: t.y }));
+    }
     this.probe = {
       x: this.currentLevel.startPos.x,
       y: this.currentLevel.startPos.y,
@@ -94,6 +103,7 @@ export class OrbitalEngine {
       maxFuel: this.currentLevel.initialFuel,
       state: "docked",
       flightTime: 0,
+      isAerobraking: false,
     };
     this.trajectoryPreview = null;
     this.isAiming = false;
@@ -334,6 +344,7 @@ export class OrbitalEngine {
     // 1. Update Probe in flight
     if (this.probe.state === "flying") {
       this.probe.flightTime += delta;
+      this.probe.isAerobraking = false;
 
       // Record trail
       this.probe.trail.unshift({ x: this.probe.x, y: this.probe.y, alpha: 1 });
@@ -383,9 +394,35 @@ export class OrbitalEngine {
             return;
           }
         }
+
+        // Atmospheric Aerobraking drag & plasma friction sparks
+        if (b.hasAtmosphere) {
+          const atmoRadius = b.atmosphereRadius || b.radius * 1.65;
+          if (d <= atmoRadius && d > b.radius) {
+            this.probe.isAerobraking = true;
+            const atmoDepth = 1 - (d - b.radius) / (atmoRadius - b.radius);
+            const drag = 0.45 * atmoDepth;
+            this.probe.vx *= 1 - drag * delta;
+            this.probe.vy *= 1 - drag * delta;
+            celestialSound.playAerobrake();
+
+            // Emit plasma friction sparks trailing behind probe
+            const angle = Math.atan2(this.probe.vy, this.probe.vx) + Math.PI + (Math.random() - 0.5) * 0.8;
+            const sparkSpeed = Math.hypot(this.probe.vx, this.probe.vy) * 0.35 + 20;
+            this.particles.push({
+              x: this.probe.x + (Math.random() - 0.5) * 6,
+              y: this.probe.y + (Math.random() - 0.5) * 6,
+              vx: Math.cos(angle) * sparkSpeed,
+              vy: Math.sin(angle) * sparkSpeed,
+              color: Math.random() > 0.4 ? "#f97316" : "#fbbf24",
+              life: 0.22,
+              maxLife: 0.22,
+            });
+          }
+        }
       }
 
-      // 3. Relic collections
+      // 3. Relic collections with Fuel Recovery bonus
       for (const r of this.currentLevel.relics) {
         if (!r.collected) {
           const dist = Math.hypot(r.x - this.probe.x, r.y - this.probe.y);
@@ -393,6 +430,8 @@ export class OrbitalEngine {
             r.collected = true;
             celestialSound.playRelic();
             this.addShockwave(r.x, r.y, "#38bdf8");
+            // Award +25 fuel boost
+            this.probe.fuel = Math.min(this.probe.maxFuel, this.probe.fuel + 25);
           }
         }
       }
@@ -438,6 +477,28 @@ export class OrbitalEngine {
   }
 
   private handleVictory() {
+    if (this.probe.trail.length > 4) {
+      this.ghostTrail = this.probe.trail.map((t) => ({ x: t.x, y: t.y }));
+    }
+
+    if (this.isOdysseyMode) {
+      this.probe.state = "cleared";
+      celestialSound.playVictory();
+      celestialSound.playWarpJump();
+      this.addShockwave(this.currentLevel.target.x, this.currentLevel.target.y, "#38bdf8");
+
+      this.odysseySector++;
+      const fuelBonus = Math.min(200, Math.round(this.probe.fuel + 45));
+      if (this.onOdysseyWarp) {
+        this.onOdysseyWarp(this.odysseySector, fuelBonus);
+      }
+      setTimeout(() => {
+        const nextLevel = generateOdysseySector(this.odysseySector, fuelBonus);
+        this.setLevel(nextLevel);
+      }, 1200);
+      return;
+    }
+
     this.probe.state = "cleared";
     celestialSound.playVictory();
     this.addShockwave(this.currentLevel.target.x, this.currentLevel.target.y, "#4ade80");
@@ -467,6 +528,9 @@ export class OrbitalEngine {
   }
 
   private handleCrash(reason: string) {
+    if (this.probe.trail.length > 4) {
+      this.ghostTrail = this.probe.trail.map((t) => ({ x: t.x, y: t.y }));
+    }
     this.probe.state = "crashed";
     celestialSound.playCrash();
     this.addShockwave(this.probe.x, this.probe.y, "#ef4444");
@@ -516,6 +580,9 @@ export class OrbitalEngine {
     // 5. Target Beacon
     this.renderTargetBeacon(this.currentLevel.target);
 
+    // 5.5 Ghost Trajectory (Previous attempt)
+    this.renderGhostTrail();
+
     // 6. Trajectory Predictive Arc (Slingshot preview)
     if (this.trajectoryPreview && this.probe.state === "docked") {
       this.renderTrajectoryPreview(this.trajectoryPreview);
@@ -538,6 +605,35 @@ export class OrbitalEngine {
       ctx.fill();
     }
     ctx.globalAlpha = 1;
+  }
+
+  private renderGhostTrail() {
+    const { ctx } = this;
+    if (this.ghostTrail.length < 2) return;
+
+    ctx.save();
+    ctx.strokeStyle = "rgba(148, 163, 184, 0.28)";
+    ctx.lineWidth = 1.8;
+    ctx.setLineDash([4, 6]);
+
+    ctx.beginPath();
+    ctx.moveTo(this.ghostTrail[0].x, this.ghostTrail[0].y);
+    for (let i = 1; i < this.ghostTrail.length; i++) {
+      ctx.lineTo(this.ghostTrail[i].x, this.ghostTrail[i].y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Small label near midpoint of ghost trail
+    const midIdx = Math.floor(this.ghostTrail.length / 2);
+    const midPt = this.ghostTrail[midIdx];
+    if (midPt) {
+      ctx.fillStyle = "rgba(148, 163, 184, 0.4)";
+      ctx.font = "9px 'JetBrains Mono', monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("PREV TRAJECTORY", midPt.x, midPt.y - 6);
+    }
+    ctx.restore();
   }
 
   private renderStarfield() {
@@ -572,14 +668,50 @@ export class OrbitalEngine {
   private renderCelestialBody(b: LevelData["bodies"][0]) {
     const { ctx } = this;
 
-    // Glowing Halo
-    const glowGrad = ctx.createRadialGradient(b.x, b.y, b.radius * 0.5, b.x, b.y, b.radius * 2.2);
-    glowGrad.addColorStop(0, b.glowColor);
-    glowGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
-    ctx.fillStyle = glowGrad;
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, b.radius * 2.2, 0, Math.PI * 2);
-    ctx.fill();
+    // Gravitational equipotential rings (Spacetime warping)
+    const eqCount = 3;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 7]);
+    const wave = (performance.now() * 0.001) % 1;
+    for (let i = 1; i <= eqCount; i++) {
+      const radiusMult = 1.35 + i * 0.55 + wave * 0.12;
+      const alpha = Math.max(0, 0.20 - i * 0.045);
+      ctx.strokeStyle = `rgba(99, 102, 241, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.radius * radiusMult, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    // Glowing Halo or Atmospheric Envelope
+    if (b.hasAtmosphere) {
+      const atmoR = b.atmosphereRadius || b.radius * 1.65;
+      const atmoGrad = ctx.createRadialGradient(b.x, b.y, b.radius, b.x, b.y, atmoR);
+      atmoGrad.addColorStop(0, "rgba(56, 189, 248, 0.45)");
+      atmoGrad.addColorStop(0.65, "rgba(56, 189, 248, 0.15)");
+      atmoGrad.addColorStop(1, "rgba(56, 189, 248, 0)");
+      ctx.fillStyle = atmoGrad;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, atmoR, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Atmospheric entry boundary dashed halo
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.35)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 6]);
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, atmoR, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else {
+      const glowGrad = ctx.createRadialGradient(b.x, b.y, b.radius * 0.5, b.x, b.y, b.radius * 2.2);
+      glowGrad.addColorStop(0, b.glowColor);
+      glowGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = glowGrad;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.radius * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     if (b.type === "blackhole") {
       // Accretion disk

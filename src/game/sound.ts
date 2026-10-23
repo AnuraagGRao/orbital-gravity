@@ -219,6 +219,57 @@ export class CelestialAudio {
     osc.stop(now + 0.36);
   }
 
+  // Atmospheric Aerobraking re-entry friction burn
+  playAerobrake() {
+    if (this.isMuted || this.volume <= 0) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const filter = this.ctx.createBiquadFilter();
+    const gain = this.ctx.createGain();
+
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(260 + Math.random() * 80, now);
+    osc.frequency.exponentialRampToValueAtTime(80, now + 0.18);
+
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(600, now);
+
+    gain.gain.setValueAtTime(0.08 * this.volume, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.19);
+  }
+
+  // Hyperdrive Relativistic Warp Jump
+  playWarpJump() {
+    if (this.isMuted || this.volume <= 0) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(120, now);
+    osc.frequency.exponentialRampToValueAtTime(1400, now + 0.4);
+
+    gain.gain.setValueAtTime(0.22 * this.volume, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.46);
+  }
+
   toggleMute(): boolean {
     this.isMuted = !this.isMuted;
     localStorage.setItem("og_muted", this.isMuted.toString());

@@ -23,6 +23,8 @@ export interface CelestialBody {
   color: string;
   glowColor: string;
   rings?: boolean;
+  hasAtmosphere?: boolean;
+  atmosphereRadius?: number;
   eventHorizonRadius?: number; // for black holes
   exitWormholeId?: string; // for wormhole pairs
   rotationSpeed?: number;
@@ -59,6 +61,7 @@ export interface Probe {
   state: "docked" | "flying" | "cleared" | "crashed";
   flightTime: number;
   crashReason?: "planet_impact" | "event_horizon" | "lost_in_deep_space";
+  isAerobraking?: boolean;
 }
 
 export interface LevelData {
