@@ -456,3 +456,8 @@ input[type="range"].volume-slider::-moz-range-thumb {
   }
 }
 
+.fill-amber-400 {
+  fill: #fbbf24 !important;
+}
+
+

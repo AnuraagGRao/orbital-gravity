@@ -501,11 +501,16 @@ export default function App() {
                 {[1, 2, 3].map((s) => (
                   <Star
                     key={s}
-                    className={`w-7 h-7 ${
+                    className={`w-8 h-8 transition-all ${
                       s <= victoryModal.stars
-                        ? "text-amber-400 fill-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.6)]"
+                        ? "text-amber-400 fill-amber-400"
                         : "text-slate-700"
                     }`}
+                    fill={s <= victoryModal.stars ? "#fbbf24" : "none"}
+                    color={s <= victoryModal.stars ? "#fbbf24" : "#334155"}
+                    style={{
+                      filter: s <= victoryModal.stars ? "drop-shadow(0 0 10px rgba(251, 191, 36, 0.75))" : "none"
+                    }}
                   />
                 ))}
               </div>

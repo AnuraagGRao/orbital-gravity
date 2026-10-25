@@ -62,6 +62,7 @@ export interface Probe {
   flightTime: number;
   crashReason?: "planet_impact" | "event_horizon" | "lost_in_deep_space";
   isAerobraking?: boolean;
+  wormholeCooldown?: number;
 }
 
 export interface LevelData {

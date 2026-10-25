@@ -348,6 +348,9 @@ export class OrbitalEngine {
     if (this.probe.state === "flying") {
       this.probe.flightTime += delta;
       this.probe.isAerobraking = false;
+      if (this.probe.wormholeCooldown && this.probe.wormholeCooldown > 0) {
+        this.probe.wormholeCooldown -= delta;
+      }
 
       // Record trail
       this.probe.trail.unshift({ x: this.probe.x, y: this.probe.y, alpha: 1 });
@@ -374,13 +377,28 @@ export class OrbitalEngine {
             this.handleCrash("Singularity Event Horizon: Crushed by gravitational tidal forces!");
             return;
           }
-        } else if (b.type === "wormhole" && b.exitWormholeId) {
-          if (d <= b.radius) {
+        } else if (b.type === "wormhole") {
+          // Wormholes are spacetime conduits - NEVER a solid surface collision!
+          if (b.exitWormholeId && d <= b.radius && (!this.probe.wormholeCooldown || this.probe.wormholeCooldown <= 0)) {
             const exit = this.currentLevel.bodies.find((w) => w.id === b.exitWormholeId);
             if (exit) {
-              this.probe.x = exit.x;
-              this.probe.y = exit.y;
+              const speed = Math.hypot(this.probe.vx, this.probe.vy) || 1;
+              const dirX = this.probe.vx / speed;
+              const dirY = this.probe.vy / speed;
+
+              // Emerge safely outside the exit wormhole along the travel vector
+              this.probe.x = exit.x + dirX * (exit.radius + this.probe.radius + 8);
+              this.probe.y = exit.y + dirY * (exit.radius + this.probe.radius + 8);
+
+              // Relativistic acceleration boost through the throat
+              this.probe.vx = dirX * (speed * 1.15);
+              this.probe.vy = dirY * (speed * 1.15);
+
+              // Immunity cooldown so you don't immediately re-enter exit or loop
+              this.probe.wormholeCooldown = 0.6;
+
               celestialSound.playWormhole();
+              this.addShockwave(b.x, b.y, "#3b82f6");
               this.addShockwave(exit.x, exit.y, "#ec4899");
             }
           }
@@ -509,11 +527,19 @@ export class OrbitalEngine {
     const relicsCount = this.currentLevel.relics.filter((r) => r.collected).length;
     const totalRelics = this.currentLevel.relics.length;
 
-    // Calculate stars: 1 star for reaching beacon, +1 for all relics, +1 for fuel/time conservation
+    // Calculate stars:
+    // 1 Star: Reaching the beacon safely
+    // 2 Stars: All relics collected OR >= 25% fuel remaining
+    // 3 Stars: All relics collected AND >= 25% fuel remaining (or beating target fuel)
+    const fuelPercent = (this.probe.fuel / this.probe.maxFuel) * 100;
+    const allRelics = totalRelics === 0 || relicsCount === totalRelics;
+    const has25PercentFuel = fuelPercent >= 25 || this.probe.fuel >= this.currentLevel.threeStarFuel;
+
     let stars = 1;
-    if (relicsCount === totalRelics) stars++;
-    if (this.probe.fuel >= this.currentLevel.threeStarFuel && this.probe.flightTime <= this.currentLevel.parTime * 1.3) {
-      stars++;
+    if (allRelics && has25PercentFuel) {
+      stars = 3;
+    } else if (allRelics || has25PercentFuel) {
+      stars = 2;
     }
 
     const result: MissionResult = {

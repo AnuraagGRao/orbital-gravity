@@ -87,12 +87,14 @@ export function simulateTrajectory(
         if (d <= b.radius) {
           const exit = bodies.find((w) => w.id === b.exitWormholeId);
           if (exit) {
-            x = exit.x;
-            y = exit.y;
+            const speed = Math.hypot(vx, vy) || 1;
+            const dirX = vx / speed;
+            const dirY = vy / speed;
+            x = exit.x + dirX * (exit.radius + 12);
+            y = exit.y + dirY * (exit.radius + 12);
             // Boost outward from exit
-            const speed = Math.hypot(vx, vy);
-            vx = (vx / speed) * (speed * 1.05);
-            vy = (vy / speed) * (speed * 1.05);
+            vx = dirX * (speed * 1.15);
+            vy = dirY * (speed * 1.15);
           }
         }
       } else if (b.type === "nebula") {
