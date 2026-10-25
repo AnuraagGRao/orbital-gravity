@@ -321,162 +321,163 @@ export default function App() {
       )}
 
       {/* ── Main Canvas Stage ─────────────────────────────────────────────────── */}
-      <div className="relative w-full max-w-[1024px] max-h-[calc(100vh-60px)] aspect-[1024/680] flex items-center justify-center p-1 sm:p-2 touch-none select-none">
-        <canvas
-          ref={canvasRef}
-          className="w-full h-full rounded-2xl border border-white/10 shadow-[0_0_60px_rgba(15,23,42,0.8)] cursor-crosshair touch-none"
-        />
+      <div className="stage-viewport">
+        <div className="stage-wrapper">
+          <canvas
+            ref={canvasRef}
+            className="canvas-element"
+          />
 
-        {/* ── Real-Time HUD Overlay ───────────────────────────────────────────── */}
-        <div className="absolute top-3 left-3 sm:top-6 sm:left-6 pointer-events-none flex flex-col gap-1.5 sm:gap-2.5 scale-90 sm:scale-100 origin-top-left z-20">
-          {/* Velocity & Status */}
-          <div className="glass-panel px-3 py-1.5 sm:px-4 sm:py-2 flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs font-mono text-white backdrop-blur-md">
-            <Rocket className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-400" />
-            <div>
-              <span className="text-slate-400">VEL: </span>
-              <span className="font-extrabold text-sky-300">{speedKmh.toLocaleString()} km/s</span>
+          {/* ── Top-Left HUD Overlay ───────────────────────────────────────────── */}
+          <div className="hud-top-left">
+            {/* Velocity & Status */}
+            <div className="glass-panel px-3 py-1.5 sm:px-4 sm:py-2 flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs font-mono text-white backdrop-blur-md">
+              <Rocket className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-400" />
+              <div>
+                <span className="text-slate-400">VEL: </span>
+                <span className="font-extrabold text-sky-300">{speedKmh.toLocaleString()} km/s</span>
+              </div>
             </div>
-          </div>
 
-          {/* Atmospheric Aerobraking Drag Alert */}
-          {isAerobraking && (
-            <div className="glass-panel px-3 py-1.5 sm:px-4 sm:py-2 flex items-center gap-2 text-[11px] sm:text-xs font-mono text-amber-300 border border-amber-500/50 bg-amber-950/50 backdrop-blur-md animate-pulse">
-              <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 animate-bounce" />
-              <span className="font-bold">AEROBRAKING DRAG</span>
-            </div>
-          )}
+            {/* Atmospheric Aerobraking Drag Alert */}
+            {isAerobraking && (
+              <div className="glass-panel px-3 py-1.5 sm:px-4 sm:py-2 flex items-center gap-2 text-[11px] sm:text-xs font-mono text-amber-300 border border-amber-500/50 bg-amber-950/50 backdrop-blur-md animate-pulse">
+                <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 animate-bounce" />
+                <span className="font-bold">AEROBRAKING DRAG</span>
+              </div>
+            )}
 
-          {/* RCS Fuel Gauge */}
-          <div className="glass-panel px-3 py-1.5 sm:px-4 sm:py-2 flex flex-col gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-mono text-white backdrop-blur-md w-36 sm:w-44">
-            <div className="flex justify-between items-center text-[10px] sm:text-[11px]">
-              <span className="text-slate-400">RCS FUEL:</span>
-              <span className={`font-bold ${fuelPercent > 30 ? "text-emerald-400" : "text-amber-400"}`}>
-                {fuelPercent}%
-              </span>
-            </div>
-            <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-              <div
-                className={`h-full transition-all duration-150 ${
-                  fuelPercent > 30 ? "bg-emerald-400" : "bg-amber-400"
-                }`}
-                style={{ width: `${fuelPercent}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Relics Recovered (+25 Fuel Bonus Badge) */}
-          <div className="glass-panel px-3 py-1.5 sm:px-4 sm:py-2 flex items-center gap-2 text-[11px] sm:text-xs font-mono text-white backdrop-blur-md">
-            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
-            <span className="text-slate-400">RELICS: </span>
-            <span className="font-bold text-amber-300">
-              {relicsCount} / {totalRelics}
-            </span>
-            <span className="text-[10px] text-sky-400/80 font-mono ml-1">(+25 FUEL)</span>
-          </div>
-
-          {/* Ghost Trail Status */}
-          {engineRef.current && engineRef.current.ghostTrail.length > 0 && probeState === "docked" && (
-            <div className="glass-panel px-2.5 py-1 flex items-center gap-1.5 text-[10px] font-mono text-slate-400 border border-white/10">
-              <span className="w-2 h-2 rounded-full bg-slate-400/60 animate-ping" />
-              <span>GHOST TRAIL ASSIST ON</span>
-            </div>
-          )}
-        </div>
-
-        {/* Time Warp Selector (Top-Right of Canvas) */}
-        <div className="absolute top-3 right-3 sm:top-6 sm:right-6 flex items-center gap-1 sm:gap-1.5 glass-panel p-1 sm:p-1.5 text-[11px] sm:text-xs font-mono scale-90 sm:scale-100 origin-top-right z-20">
-          <FastForward className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400 ml-1 sm:ml-1.5" />
-          {[1, 2, 4].map((warp) => (
-            <button
-              key={warp}
-              onClick={() => handleTimeWarp(warp)}
-              className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg transition-all ${
-                timeWarp === warp
-                  ? "bg-indigo-600 text-white font-bold"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              {warp}x
-            </button>
-          ))}
-        </div>
-
-        {/* Slingshot Guidance Prompt */}
-        {probeState === "docked" && (
-          <div className="absolute bottom-16 sm:bottom-6 left-1/2 -translate-x-1/2 glass-pill px-3 py-1.5 sm:px-5 sm:py-2 text-[10px] sm:text-xs font-mono text-indigo-300 border border-indigo-500/30 flex items-center gap-2 shadow-lg animate-pulse whitespace-nowrap z-20 pointer-events-none max-w-[90vw] overflow-hidden text-ellipsis">
-            <Radio className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400 animate-spin shrink-0" />
-            <span>DRAG BACKWARD TO AIM • PULL RIM FOR FULL FORCE</span>
-          </div>
-        )}
-
-        {/* In-Flight RCS Touch Thrusters (Mobile / Mouse Friendly) */}
-        {probeState === "flying" && (
-          <div className="absolute bottom-3 right-3 sm:bottom-6 sm:right-6 flex flex-col items-center gap-1 glass-panel p-1.5 sm:p-2 scale-90 sm:scale-100 origin-bottom-right z-20">
-            <div className="text-[9px] sm:text-[10px] font-mono text-slate-400 mb-0.5">RCS (WASD)</div>
-            <button
-              onClick={() => engineRef.current?.applyRcsImpulse("up")}
-              className="glass-btn px-3 py-1.5 rounded text-xs font-mono text-white active:bg-indigo-600"
-            >
-              ▲
-            </button>
-            <div className="flex gap-1">
-              <button
-                onClick={() => engineRef.current?.applyRcsImpulse("left")}
-                className="glass-btn px-3 py-1.5 rounded text-xs font-mono text-white active:bg-indigo-600"
-              >
-                ◀
-              </button>
-              <button
-                onClick={() => engineRef.current?.applyRcsImpulse("down")}
-                className="glass-btn px-3 py-1.5 rounded text-xs font-mono text-white active:bg-indigo-600"
-              >
-                ▼
-              </button>
-              <button
-                onClick={() => engineRef.current?.applyRcsImpulse("right")}
-                className="glass-btn px-3 py-1.5 rounded text-xs font-mono text-white active:bg-indigo-600"
-              >
-                ▶
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Reset Flight Button */}
-        <div className="absolute bottom-3 left-3 sm:bottom-6 sm:left-6 scale-90 sm:scale-100 origin-bottom-left z-20">
-          <button
-            onClick={handleResetFlight}
-            className="glass-btn px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-mono text-slate-300 hover:text-white flex items-center gap-1.5 sm:gap-2 cursor-pointer active:scale-95"
-          >
-            <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" />
-            <span>RESET FLIGHT</span>
-          </button>
-        </div>
-
-        {/* ── Tactical Companion Comms Window ─────────────────────────────────── */}
-        {showBriefing && (
-          <div className="absolute top-14 left-3 right-3 sm:left-auto sm:right-6 sm:top-16 max-w-sm glass-panel p-3.5 sm:p-4 border border-indigo-500/30 rounded-2xl shadow-2xl z-30 animate-in fade-in slide-in-from-right duration-300">
-            <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">
-                  {currentLevel.companion === "koji" ? "🐼" : currentLevel.companion === "mochi" ? "🦫" : "🦊"}
-                </span>
-                <span className="text-xs font-mono font-bold uppercase text-indigo-300">
-                  {currentLevel.companion} // TACTICAL COMMS
+            {/* RCS Fuel Gauge */}
+            <div className="glass-panel px-3 py-1.5 sm:px-4 sm:py-2 flex flex-col gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-mono text-white backdrop-blur-md w-36 sm:w-44">
+              <div className="flex justify-between items-center text-[10px] sm:text-[11px]">
+                <span className="text-slate-400">RCS FUEL:</span>
+                <span className={`font-bold ${fuelPercent > 30 ? "text-emerald-400" : "text-amber-400"}`}>
+                  {fuelPercent}%
                 </span>
               </div>
-              <button
-                onClick={() => setShowBriefing(false)}
-                className="text-xs text-slate-400 hover:text-white px-2 py-0.5 rounded hover:bg-white/10 cursor-pointer"
-              >
-                ✕
-              </button>
+              <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-150 ${
+                    fuelPercent > 30 ? "bg-emerald-400" : "bg-amber-400"
+                  }`}
+                  style={{ width: `${fuelPercent}%` }}
+                />
+              </div>
             </div>
-            <p className="text-xs font-mono text-slate-300 leading-relaxed">
-              "{currentLevel.briefing}"
-            </p>
+
+            {/* Relics Recovered (+25 Fuel Bonus Badge) */}
+            <div className="glass-panel px-3 py-1.5 sm:px-4 sm:py-2 flex items-center gap-2 text-[11px] sm:text-xs font-mono text-white backdrop-blur-md">
+              <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
+              <span className="text-slate-400">RELICS: </span>
+              <span className="font-bold text-amber-300">
+                {relicsCount} / {totalRelics}
+              </span>
+              <span className="text-[10px] text-sky-400/80 font-mono ml-1">(+25 FUEL)</span>
+            </div>
+
+            {/* Ghost Trail Status */}
+            {engineRef.current && engineRef.current.ghostTrail.length > 0 && probeState === "docked" && (
+              <div className="glass-panel px-2.5 py-1 flex items-center gap-1.5 text-[10px] font-mono text-slate-400 border border-white/10">
+                <span className="w-2 h-2 rounded-full bg-slate-400/60 animate-ping" />
+                <span>GHOST TRAIL ASSIST ON</span>
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Time Warp Selector (Top-Right of Canvas) */}
+          <div className="hud-top-right glass-panel p-1 sm:p-1.5 text-[11px] sm:text-xs font-mono">
+            <FastForward className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400 ml-1 sm:ml-1.5" />
+            {[1, 2, 4].map((warp) => (
+              <button
+                key={warp}
+                onClick={() => handleTimeWarp(warp)}
+                className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg transition-all ${
+                  timeWarp === warp
+                    ? "bg-indigo-600 text-white font-bold"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                {warp}x
+              </button>
+            ))}
+          </div>
+
+          {/* Slingshot Guidance Prompt */}
+          {probeState === "docked" && (
+            <div className="hud-bottom-center glass-pill px-3 py-1.5 sm:px-5 sm:py-2 text-[10px] sm:text-xs font-mono text-indigo-300 border border-indigo-500/30 flex items-center gap-2 shadow-lg animate-pulse whitespace-nowrap">
+              <Radio className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400 animate-spin shrink-0" />
+              <span>DRAG BACKWARD TO AIM • PULL RIM FOR FULL FORCE</span>
+            </div>
+          )}
+
+          {/* In-Flight RCS Touch Thrusters (Mobile / Mouse Friendly) */}
+          {probeState === "flying" && (
+            <div className="hud-bottom-right glass-panel p-1.5 sm:p-2">
+              <div className="text-[9px] sm:text-[10px] font-mono text-slate-400 mb-0.5">RCS (WASD)</div>
+              <button
+                onClick={() => engineRef.current?.applyRcsImpulse("up")}
+                className="glass-btn px-3 py-1.5 rounded text-xs font-mono text-white active:bg-indigo-600"
+              >
+                ▲
+              </button>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => engineRef.current?.applyRcsImpulse("left")}
+                  className="glass-btn px-3 py-1.5 rounded text-xs font-mono text-white active:bg-indigo-600"
+                >
+                  ◀
+                </button>
+                <button
+                  onClick={() => engineRef.current?.applyRcsImpulse("down")}
+                  className="glass-btn px-3 py-1.5 rounded text-xs font-mono text-white active:bg-indigo-600"
+                >
+                  ▼
+                </button>
+                <button
+                  onClick={() => engineRef.current?.applyRcsImpulse("right")}
+                  className="glass-btn px-3 py-1.5 rounded text-xs font-mono text-white active:bg-indigo-600"
+                >
+                  ▶
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Reset Flight Button */}
+          <div className="hud-bottom-left">
+            <button
+              onClick={handleResetFlight}
+              className="glass-btn px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-mono text-slate-300 hover:text-white flex items-center gap-1.5 sm:gap-2 cursor-pointer active:scale-95"
+            >
+              <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" />
+              <span>RESET FLIGHT</span>
+            </button>
+          </div>
+
+          {/* ── Tactical Companion Comms Window ─────────────────────────────────── */}
+          {showBriefing && (
+            <div className="hud-comms glass-panel p-3.5 sm:p-4 border border-indigo-500/30 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-right duration-300">
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">
+                    {currentLevel.companion === "koji" ? "🐼" : currentLevel.companion === "mochi" ? "🦫" : "🦊"}
+                  </span>
+                  <span className="text-xs font-mono font-bold uppercase text-indigo-300">
+                    {currentLevel.companion} // TACTICAL COMMS
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowBriefing(false)}
+                  className="text-xs text-slate-400 hover:text-white px-2 py-0.5 rounded hover:bg-white/10 cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="text-xs font-mono text-slate-300 leading-relaxed">
+                "{currentLevel.briefing}"
+              </p>
+            </div>
+          )}
 
         {/* ── Victory Clearance Modal (Campaign & Procedural) ───────────────────── */}
         {victoryModal && gameMode !== "odyssey" && (
@@ -590,5 +591,6 @@ export default function App() {
         )}
       </div>
     </div>
-  );
+  </div>
+);
 }

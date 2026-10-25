@@ -20,8 +20,8 @@ export class OrbitalEngine {
   // Slingshot Pull & Calibration Constants
   public static readonly MAX_PULL_RADIUS = 150;
   public static readonly MIN_PULL_THRESHOLD = 14;
-  public static readonly MIN_LAUNCH_SPEED = 40;
-  public static readonly MAX_LAUNCH_SPEED = 320;
+  public static readonly MIN_LAUNCH_SPEED = 8;
+  public static readonly MAX_LAUNCH_SPEED = 240;
 
   // Interaction & Aiming
   private isAiming: boolean = false;
@@ -262,9 +262,12 @@ export class OrbitalEngine {
         )
       : 0;
 
+    // Progressive power curve so small pulls give fine orbital alignment adjustments
+    // without automatically solving the level at 6% pull.
+    const curvedRatio = Math.pow(pullRatio, 1.4);
     const launchSpeed =
       OrbitalEngine.MIN_LAUNCH_SPEED +
-      (OrbitalEngine.MAX_LAUNCH_SPEED - OrbitalEngine.MIN_LAUNCH_SPEED) * pullRatio;
+      (OrbitalEngine.MAX_LAUNCH_SPEED - OrbitalEngine.MIN_LAUNCH_SPEED) * curvedRatio;
     const isFullForce = pullRatio >= 0.98;
 
     // Handle clamped to MAX_PULL_RADIUS along the pull angle
@@ -441,7 +444,7 @@ export class OrbitalEngine {
       const distToTarget = Math.hypot(target.x - this.probe.x, target.y - this.probe.y);
       if (distToTarget <= target.captureRadius) {
         const currentSpeed = Math.hypot(this.probe.vx, this.probe.vy);
-        if (currentSpeed <= MAX_CAPTURE_SPEED * 1.5) {
+        if (currentSpeed <= MAX_CAPTURE_SPEED) {
           this.handleVictory();
           return;
         }

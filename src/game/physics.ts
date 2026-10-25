@@ -1,7 +1,7 @@
 import type { Vector2D, CelestialBody, TargetBeacon, Relic } from "./types";
 
 export const GRAVITY_CONSTANT = 4500;
-export const MAX_CAPTURE_SPEED = 280; // Max speed allowed to dock into target beacon without slingshotting through
+export const MAX_CAPTURE_SPEED = 190; // Max speed allowed to dock into target beacon without slingshotting through
 
 export interface TrajectoryPoint {
   x: number;
@@ -119,7 +119,7 @@ export function simulateTrajectory(
     const distToTarget = Math.hypot(target.x - x, target.y - y);
     if (distToTarget <= target.captureRadius) {
       const currentSpeed = Math.hypot(vx, vy);
-      if (currentSpeed <= MAX_CAPTURE_SPEED * 1.5) {
+      if (currentSpeed <= MAX_CAPTURE_SPEED) {
         points.push({ x, y, willHitTarget: true });
         return { points, outcome: "target" };
       }
